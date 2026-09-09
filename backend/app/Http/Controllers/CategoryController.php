@@ -6,16 +6,22 @@ use Illuminate\Http\Request;
 use App\Models\Category;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
+use App\Http\Resources\CategoryResource;
 
 class CategoryController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    
     public function index()
-    {
-        return Category::all();
-    }
+{
+    $categories = Category::whereNull('parent_id')
+        ->where('is_active', true)
+        ->with(['children' => function ($query) {
+            $query->where('is_active', true);
+        }])
+        ->get();
+
+    return CategoryResource::collection($categories);
+}
 
     public function store(StoreCategoryRequest $request)
 {
@@ -24,13 +30,11 @@ class CategoryController extends Controller
     return response()->json($category, 201);
 }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
+    
+public function show(string $id)
+{
+    return new CategoryResource(Category::findOrFail($id));
+}
 
     public function update(UpdateCategoryRequest $request, string $id)
     {
@@ -46,5 +50,14 @@ class CategoryController extends Controller
     $category->save();
 
     return response()->json(['message' => 'Kategori pasif hale getirildi.']);
+    }
+
+    public function restore(string $id)
+    {
+    $category = Category::findOrFail($id);
+    $category->is_active = true;
+    $category->save();
+
+    return response()->json(['message' => 'Kategori tekrar aktif hale getirildi.']);
     }
 }
