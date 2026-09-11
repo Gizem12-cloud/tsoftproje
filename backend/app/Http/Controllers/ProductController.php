@@ -7,7 +7,7 @@ use App\Models\Product;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
-
+use App\Models\CartItem;
 
 class ProductController extends Controller
 {
@@ -69,11 +69,13 @@ class ProductController extends Controller
     
     public function destroy(string $id)
     {
-    $product = Product::findOrFail($id);
-    $product->is_active = false;
-    $product->save();
-
-    return response()->json(['message' => 'Ürün pasif hale getirildi.']);
+        $product = Product::findOrFail($id);
+        $product->is_active = false;
+        $product->save();
+    
+        CartItem::where('product_id', $product->id)->delete();
+    
+        return response()->json(['message' => 'Ürün pasif hale getirildi.']);
     }
 
 

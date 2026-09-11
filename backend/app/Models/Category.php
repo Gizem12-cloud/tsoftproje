@@ -13,4 +13,18 @@ class Category extends Model
 {
     return $this->hasMany(Category::class, 'parent_id');
 }
+
+
+public function descendantIds(): array
+{
+    $ids = [];
+
+    foreach ($this->children as $child) {
+        $ids[] = $child->id;
+        $ids = array_merge($ids, $child->descendantIds());
+    }
+
+    return $ids;
+}
+
 }

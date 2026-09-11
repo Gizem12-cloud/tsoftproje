@@ -7,6 +7,8 @@ use App\Models\Category;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
+use App\Models\Product;
+
 
 class CategoryController extends Controller
 {
@@ -43,13 +45,29 @@ public function show(string $id)
 
     return response()->json($category);
     }
+
+
+
     public function destroy(string $id)
     {
-    $category = Category::findOrFail($id);
-    $category->is_active = false;
-    $category->save();
-
-    return response()->json(['message' => 'Kategori pasif hale getirildi.']);
+        $category = Category::findOrFail($id);
+    
+        $categoryIds = array_merge([$category->id], $category->descendantIds());
+    
+        $hasActiveProducts = Product::whereIn('category_id', $categoryIds)
+            ->where('is_active', true)
+            ->exists();
+    
+        if ($hasActiveProducts) {
+            return response()->json([
+                'message' => 'Bu kategoride veya alt kategorilerinde aktif ürünler var, önce onları kaldırmalısın.',
+            ], 422);
+        }
+    
+        $category->is_active = false;
+        $category->save();
+    
+        return response()->json(['message' => 'Kategori pasif hale getirildi.']);
     }
 
     public function restore(string $id)
