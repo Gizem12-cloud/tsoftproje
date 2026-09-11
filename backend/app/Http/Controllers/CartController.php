@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Cart;
 use App\Models\Product;
-
+use App\Http\Resources\CartResource;
 
 
 class CartController extends Controller
@@ -16,7 +16,7 @@ class CartController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
-        return response()->json($cart);
+        return new CartResource($cart);
     }
 
     public function store(Request $request)
@@ -46,7 +46,7 @@ class CartController extends Controller
         ]);
     }
 
-    return response()->json($cart->load('items.product'), 201);
+    return (new CartResource($cart->load('items.product')))->response()->setStatusCode(201);
 }
 
 
@@ -64,6 +64,30 @@ public function destroy(Request $request, string $productId)
         return response()->json(['message' => 'Bu ürün sepetinde yok.'], 404);
     }
 
-    return response()->json($cart->load('items.product'));
+    return new CartResource($cart->load('items.product'));
+}
+
+public function decrease(Request $request, string $productId)
+{
+    $cart = Cart::where('user_id', $request->user()->id)->first();
+
+    if (!$cart) {
+        return response()->json(['message' => 'Sepet bulunamadı.'], 404);
+    }
+
+    $item = $cart->items()->where('product_id', $productId)->first();
+
+    if (!$item) {
+        return response()->json(['message' => 'Bu ürün sepetinde yok.'], 404);
+    }
+
+    if ($item->quantity <= 1) {
+        $item->delete();
+    } else {
+        $item->quantity -= 1;
+        $item->save();
+    }
+
+    return new CartResource($cart->load('items.product'));
 }
 }
